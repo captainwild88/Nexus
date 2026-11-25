@@ -1,0 +1,13 @@
+{
+  "name": "nexus",
+  "private": true,
+  "description": "NEXUS, Brody's personal dashboard.",
+  "scripts": {
+    "test": "node --test",
+    "build": "node scripts/build-site.mjs",
+    "sync": "node scripts/sync-notion.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

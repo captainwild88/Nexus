@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "source": "sample",
+  "notionConnected": false,
+  "syncedAt": null,
+  "dailyTodos": {
+    "title": "Daily To-Dos",
+    "items": [
+      {
+        "id": "sample-daily-1",
+        "text": "Walk along the river before it gets hot",
+        "checked": false
+      },
+      {
+        "id": "sample-daily-2",
+        "text": "Reply to the school email",
+        "checked": false
+      },
+      {
+        "id": "sample-daily-3",
+        "text": "Pick up milk on the way home",
+        "checked": false
+      },
+      {
+        "id": "sample-daily-4",
+        "text": "Put the bins out",
+        "checked": true
+      }
+    ],
+    "error": null
+  },
+  "todos": {
+    "title": "To-Dos",
+    "todo": [
+      {
+        "id": "sample-todo-1",
+        "text": "Book the car service",
+        "checked": false
+      },
+      {
+        "id": "sample-todo-2",
+        "text": "Plan a weekend in Margaret River",
+        "checked": false
+      },
+      {
+        "id": "sample-todo-3",
+        "text": "Sort the photos on the phone",
+        "checked": false
+      }
+    ],
+    "done": [
+      {
+        "id": "sample-done-1",
+        "text": "Renew the driver's licence",
+        "checked": true
+      },
+      {
+        "id": "sample-done-2",
+        "text": "Fix the leaky kitchen tap",
+        "checked": true
+      }
+    ],
+    "error": null
+  },
+  "learning": {
+    "found": true,
+    "lessons": [
+      {
+        "date": "2026-11-25",
+        "topic": "Ask AI to show its working",
+        "bigIdea": "You get a better answer when you ask it to think in steps and to name what it is unsure about.",
+        "useCase": "Next time you compare two phones or plan a day out, ask for three options, the tradeoffs, and what it is least sure about.",
+        "proTip": "If the answer feels vague, reply with one more detail, such as Perth and a budget."
+      },
+      {
+        "date": "2026-11-24",
+        "topic": "Save the prompt that worked",
+        "bigIdea": "A good prompt is a recipe you can use again, not a one-off lucky guess.",
+        "useCase": "When a reply finally sounds like you, copy the prompt into a note called Prompt recipes.",
+        "proTip": "Give each recipe a plain name, like Rewrite this text, short and kind."
+      },
+      {
+        "date": "2026-11-23",
+        "topic": "Let AI draft, you decide",
+        "bigIdea": "AI is a fast first draft. You still choose what gets sent, booked, or bought.",
+        "useCase": "Ask for a draft email, then change one sentence so it sounds like you before you send it.",
+        "proTip": "Never paste passwords, bank codes, or private medical details into a chat."
+      }
+    ],
+    "error": null
+  }
+}
