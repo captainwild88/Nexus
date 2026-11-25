@@ -3,11 +3,6 @@
   "source": "notion",
   "notionConnected": true,
   "syncedAt": "2026-11-25T04:15:17.890Z",
-  "dailyTodos": {
-    "title": "Daily To-Dos",
-    "items": [],
-    "error": "Notion could not find this page. Open it, choose Share, and invite the NEXUS integration."
-  },
   "todos": {
     "title": "To-Dos",
     "todo": [
@@ -55,10 +50,10 @@
     "lessons": [
       {
         "date": "2026-11-25",
-        "topic": "What an LLM actually is The Big Idea: An LLM is a very well-read autocomplete. It has read a huge amount of text, and all it does is predict the next word that fits, again and again. It doesn't look facts up or \"know\" things the way you do. It's spotted the patterns in how people write and explain things. Practical Use Case: A tradie says \"write a quote email for a deck job, friendly, under 100 words\", and the LLM writes something that sounds like thousands of good quote emails it's seen. A coach pastes in rough notes and gets a clean session summary back. In both cases it's matching patterns, not thinking up something new. Pro Tip: It answers in the style you set it up for, so give it a role and an audience. Instead of \"explain habits\", try: \"You're a coach talking to a tired dad who works labouring jobs. Explain in 5 short lines why small habits change identity.\" The answer will be a lot sharper.",
-        "bigIdea": "",
-        "useCase": "",
-        "proTip": ""
+        "topic": "What an LLM actually is",
+        "bigIdea": "An LLM is a very well-read autocomplete. It has read a huge amount of text, and all it does is predict the next word that fits, again and again. It doesn't look facts up or \"know\" things the way you do. It's spotted the patterns in how people write and explain things.",
+        "useCase": "A tradie says \"write a quote email for a deck job, friendly, under 100 words\", and the LLM writes something that sounds like thousands of good quote emails it's seen. A coach pastes in rough notes and gets a clean session summary back. In both cases it's matching patterns, not thinking up something new.",
+        "proTip": "It answers in the style you set it up for, so give it a role and an audience. Instead of \"explain habits\", try: \"You're a coach talking to a tired dad who works labouring jobs. Explain in 5 short lines why small habits change identity.\" The answer will be a lot sharper."
       }
     ],
     "error": null
