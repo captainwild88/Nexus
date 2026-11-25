@@ -20,9 +20,10 @@ for (const match of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
   if (url.startsWith("#") || url.startsWith("data:") || url.startsWith("mailto:")) continue;
   if (/^https?:\/\//.test(url)) continue;
   if (url.startsWith("/")) {
-    throw new Error(`Root-absolute URL breaks the /nexus/ base path: ${url}`);
+    throw new Error(`Root-absolute URL ignores the GitHub Pages path: ${url}`);
   }
-  await access(path.join(out, url.split("#")[0].split("?")[0]));
+  const relative = url.replace(/^\.\//, "");
+  await access(path.join(out, relative.split("#")[0].split("?")[0]));
 }
 
 const css = await readFile(path.join(out, "css", "styles.css"), "utf8");
@@ -30,9 +31,10 @@ for (const match of css.matchAll(/url\(([^)]+)\)/g)) {
   const url = match[1].trim().replace(/^['"]|['"]$/g, "");
   if (url.startsWith("data:")) continue;
   if (url.startsWith("/")) {
-    throw new Error(`Root-absolute CSS URL breaks the /nexus/ base path: ${url}`);
+    throw new Error(`Root-absolute CSS URL ignores the GitHub Pages path: ${url}`);
   }
-  await access(path.join(out, "css", url));
+  const relative = url.replace(/^\.\//, "");
+  await access(path.join(out, "css", relative));
 }
 
 const data = JSON.parse(await readFile(path.join(out, "data", "data.json"), "utf8"));

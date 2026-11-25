@@ -1,7 +1,7 @@
 const STORAGE_KEY = "nexus.goals.v1";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const dataUrl = new URL("../data/data.json", import.meta.url);
+const dataUrl = new URL("./data/data.json", document.baseURI);
 
 function h(tag, props = {}, children = []) {
   const node = document.createElement(tag);

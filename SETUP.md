@@ -4,7 +4,7 @@ NEXUS is your dashboard: today's to-dos, your bigger to-do list, goals, and dail
 
 The website address is:
 
-https://captainwild88.github.io/nexus/
+https://captainwild88.github.io/Nexus/
 
 Lists and lessons come from Notion. Goals stay on the phone or computer you add them on.
 
@@ -14,7 +14,7 @@ Do these three steps after the NEXUS files are on the main branch.
 
 This publishes the website.
 
-1. Open https://github.com/captainwild88/nexus
+1. Open https://github.com/captainwild88/Nexus
 2. Click **Settings**.
 3. In the left sidebar, click **Pages**.
 4. Under **Build and deployment**, set **Source** to **GitHub Actions**.
@@ -25,7 +25,7 @@ Then publish it once:
 2. Click **Deploy to GitHub Pages**.
 3. Click **Run workflow**. Leave the branch as **main**, then click the green **Run workflow** button.
 4. Wait until the yellow dot turns green.
-5. Open https://captainwild88.github.io/nexus/
+5. Open https://captainwild88.github.io/Nexus/
 
 The first time can take a minute. If you see "page not found", wait a moment and refresh.
 
@@ -40,7 +40,7 @@ The token is a password that lets GitHub read your Notion pages. It stays in Git
 3. Name it `NEXUS`. Choose the workspace that has your to-do pages. The type should be **Internal**.
 4. Save it.
 5. Copy the secret token. Notion calls it the **Internal Integration Secret**. It starts with `ntn_` or `secret_`.
-6. Open https://github.com/captainwild88/nexus/settings/secrets/actions
+6. Open https://github.com/captainwild88/Nexus/settings/secrets/actions
 7. Click **New repository secret**.
 8. For the name, type exactly `NOTION_TOKEN`
 9. Paste the secret into the value box.

@@ -2,7 +2,7 @@
 
 Brody's personal dashboard. A dark sci-fi home screen for today's to-dos, ongoing tasks, goals, and daily AI lessons.
 
-**Live site:** https://captainwild88.github.io/nexus/
+**Live site:** https://captainwild88.github.io/Nexus/
 
 To-do lists and lessons are read from Notion. Goals and the Hall of Wins stay in the browser, with a JSON backup you can export and import.
 
@@ -21,7 +21,7 @@ npm run build
 
 `npm run build` writes the site to `_site/`. Serve that folder, or serve the repo root. Opening `index.html` as a file will not load `data/data.json`.
 
-The site uses relative links so it works at `https://captainwild88.github.io/nexus/`.
+Assets and `data/data.json` use a relative `./` path, so the site follows the repository name GitHub Pages uses: https://captainwild88.github.io/Nexus/
 
 GitHub Actions:
 

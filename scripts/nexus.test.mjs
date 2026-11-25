@@ -327,14 +327,23 @@ test("sample data is labelled example data and has every section", async () => {
   assert.deepEqual(dates, sorted);
 });
 
-test("pages assets stay relative so /nexus/ works", async () => {
+test("pages assets stay relative for any repository-name case", async () => {
   const html = await readFile(path.join(root, "index.html"), "utf8");
   const css = await readFile(path.join(root, "css", "styles.css"), "utf8");
   const js = await readFile(path.join(root, "js", "app.js"), "utf8");
+  assert.match(html, /href="\.\/favicon\.svg"/);
+  assert.match(html, /href="\.\/css\/styles\.css"/);
+  assert.match(html, /src="\.\/js\/app\.js"/);
   assert.doesNotMatch(html, /(?:href|src)="\//);
   assert.doesNotMatch(css, /url\(\s*["']?\//);
-  assert.match(js, /import\.meta\.url/);
-  assert.match(html, /Orbitron|styles\.css/);
+  assert.match(css, /url\("\.\/fonts\//);
+  assert.match(js, /new URL\("\.\/data\/data\.json", document\.baseURI\)/);
+  assert.doesNotMatch(`${html}\n${css}\n${js}`, /github\.io\/nexus/i);
+  const readme = await readFile(path.join(root, "README.md"), "utf8");
+  const setup = await readFile(path.join(root, "SETUP.md"), "utf8");
+  assert.match(readme, /https:\/\/captainwild88\.github\.io\/Nexus\//);
+  assert.match(setup, /https:\/\/captainwild88\.github\.io\/Nexus\//);
+  assert.doesNotMatch(`${readme}\n${setup}`, /github\.io\/nexus\//);
   assert.equal(spawnSync(process.execPath, ["--check", "js/app.js"], { cwd: root }).status, 0);
   assert.equal(spawnSync(process.execPath, ["--check", "scripts/sync-notion.mjs"], { cwd: root }).status, 0);
 });
