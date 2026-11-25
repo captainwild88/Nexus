@@ -1,65 +1,53 @@
 {
   "version": 1,
-  "source": "sample",
-  "notionConnected": false,
-  "syncedAt": null,
+  "source": "notion",
+  "notionConnected": true,
+  "syncedAt": "2026-11-25T04:15:17.890Z",
   "dailyTodos": {
     "title": "Daily To-Dos",
-    "items": [
-      {
-        "id": "sample-daily-1",
-        "text": "Walk along the river before it gets hot",
-        "checked": false
-      },
-      {
-        "id": "sample-daily-2",
-        "text": "Reply to the school email",
-        "checked": false
-      },
-      {
-        "id": "sample-daily-3",
-        "text": "Pick up milk on the way home",
-        "checked": false
-      },
-      {
-        "id": "sample-daily-4",
-        "text": "Put the bins out",
-        "checked": true
-      }
-    ],
-    "error": null
+    "items": [],
+    "error": "Notion could not find this page. Open it, choose Share, and invite the NEXUS integration."
   },
   "todos": {
     "title": "To-Dos",
     "todo": [
       {
-        "id": "sample-todo-1",
-        "text": "Book the car service",
+        "id": "422bc823-fc97-8148-b5a0-d8654f47912c",
+        "text": "Rake leaves",
         "checked": false
       },
       {
-        "id": "sample-todo-2",
-        "text": "Plan a weekend in Margaret River",
+        "id": "422bc823-fc97-811c-a0cc-d777c3b5a563",
+        "text": "Clean BBQs",
         "checked": false
       },
       {
-        "id": "sample-todo-3",
-        "text": "Sort the photos on the phone",
+        "id": "422bc823-fc97-818d-a963-ee4ad52dca92",
+        "text": "Cut branches",
+        "checked": false
+      },
+      {
+        "id": "422bc823-fc97-8115-9c7b-f1e7739dcb8a",
+        "text": "Sort BBQ rub for the pork",
+        "checked": false
+      },
+      {
+        "id": "422bc823-fc97-8126-9cbc-e3da4f63ed9a",
+        "text": "Sort flavours for chicken wings/legs",
+        "checked": false
+      },
+      {
+        "id": "423bc823-fc97-8196-9df2-fc6e6cd2749c",
+        "text": "Whipper snip front and back",
+        "checked": false
+      },
+      {
+        "id": "423bc823-fc97-815e-860a-ca2924e53290",
+        "text": "Weed and tidy front garden beds",
         "checked": false
       }
     ],
-    "done": [
-      {
-        "id": "sample-done-1",
-        "text": "Renew the driver's licence",
-        "checked": true
-      },
-      {
-        "id": "sample-done-2",
-        "text": "Fix the leaky kitchen tap",
-        "checked": true
-      }
-    ],
+    "done": [],
     "error": null
   },
   "learning": {
@@ -67,24 +55,10 @@
     "lessons": [
       {
         "date": "2026-11-25",
-        "topic": "Ask AI to show its working",
-        "bigIdea": "You get a better answer when you ask it to think in steps and to name what it is unsure about.",
-        "useCase": "Next time you compare two phones or plan a day out, ask for three options, the tradeoffs, and what it is least sure about.",
-        "proTip": "If the answer feels vague, reply with one more detail, such as Perth and a budget."
-      },
-      {
-        "date": "2026-11-24",
-        "topic": "Save the prompt that worked",
-        "bigIdea": "A good prompt is a recipe you can use again, not a one-off lucky guess.",
-        "useCase": "When a reply finally sounds like you, copy the prompt into a note called Prompt recipes.",
-        "proTip": "Give each recipe a plain name, like Rewrite this text, short and kind."
-      },
-      {
-        "date": "2026-11-23",
-        "topic": "Let AI draft, you decide",
-        "bigIdea": "AI is a fast first draft. You still choose what gets sent, booked, or bought.",
-        "useCase": "Ask for a draft email, then change one sentence so it sounds like you before you send it.",
-        "proTip": "Never paste passwords, bank codes, or private medical details into a chat."
+        "topic": "What an LLM actually is The Big Idea: An LLM is a very well-read autocomplete. It has read a huge amount of text, and all it does is predict the next word that fits, again and again. It doesn't look facts up or \"know\" things the way you do. It's spotted the patterns in how people write and explain things. Practical Use Case: A tradie says \"write a quote email for a deck job, friendly, under 100 words\", and the LLM writes something that sounds like thousands of good quote emails it's seen. A coach pastes in rough notes and gets a clean session summary back. In both cases it's matching patterns, not thinking up something new. Pro Tip: It answers in the style you set it up for, so give it a role and an audience. Instead of \"explain habits\", try: \"You're a coach talking to a tired dad who works labouring jobs. Explain in 5 short lines why small habits change identity.\" The answer will be a lot sharper.",
+        "bigIdea": "",
+        "useCase": "",
+        "proTip": ""
       }
     ],
     "error": null
