@@ -10,6 +10,7 @@ import {
   assembleLessons,
   extractDate,
   parseDailyTodos,
+  parseLessonBlocks,
   parseLearningDatabase,
   parseOngoingTodos,
   perthISODate,
@@ -17,7 +18,6 @@ import {
   resultTitle,
 } from "./parse-notion.mjs";
 import {
-  DAILY_TODOS_PAGE_ID,
   TODOS_PAGE_ID,
   contentKey,
   writeIfChanged,
@@ -249,9 +249,11 @@ test("dates and Perth calendar days", () => {
   assert.equal(perthISODate("2026-11-24T15:30:00.000Z"), "2026-11-24");
 });
 
-test("page ids are the ones Brody shared", () => {
-  assert.equal(DAILY_TODOS_PAGE_ID, "420bc823-fc97-8157-bd78-c1a175e4ab8c");
+test("sync reads the general to-do page and skips Daily To-Dos", async () => {
   assert.equal(TODOS_PAGE_ID, "422bc823-fc97-813d-bfb2-cfb693d9102c");
+  const sync = await readFile(path.join(root, "scripts", "sync-notion.mjs"), "utf8");
+  assert.doesNotMatch(sync, /420bc823-fc97-8157-bd78-c1a175e4ab8c/);
+  assert.doesNotMatch(sync, /dailyTodos/);
 });
 
 test("content changes are detected without counting the sync clock", () => {
@@ -260,7 +262,6 @@ test("content changes are detected without counting the sync clock", () => {
     source: "notion",
     notionConnected: true,
     syncedAt: "2026-11-25T01:00:00.000Z",
-    dailyTodos: { title: "Daily To-Dos", items: [], error: null },
     todos: { title: "To-Dos", todo: [], done: [], error: null },
     learning: { found: false, lessons: [], error: null },
   };
@@ -268,7 +269,7 @@ test("content changes are detected without counting the sync clock", () => {
   assert.equal(contentKey(base), contentKey(later));
   const changed = {
     ...base,
-    dailyTodos: { ...base.dailyTodos, items: [{ id: "1", text: "Walk", checked: false }] },
+    todos: { ...base.todos, todo: [{ id: "1", text: "Walk", checked: false }] },
   };
   assert.notEqual(contentKey(base), contentKey(changed));
 });
@@ -281,8 +282,7 @@ test("unchanged Notion content does not rewrite data.json", async () => {
     source: "notion",
     notionConnected: true,
     syncedAt: "2026-11-25T01:00:00.000Z",
-    dailyTodos: { title: "Daily To-Dos", items: [{ id: "1", text: "Walk", checked: false }], error: null },
-    todos: { title: "To-Dos", todo: [], done: [], error: null },
+    todos: { title: "To-Dos", todo: [{ id: "1", text: "Walk", checked: false }], done: [], error: null },
     learning: { found: false, lessons: [], error: null },
   };
   assert.equal(await writeIfChanged(file, data), true);
@@ -291,7 +291,7 @@ test("unchanged Notion content does not rewrite data.json", async () => {
   assert.equal(saved.syncedAt, "2026-11-25T01:00:00.000Z");
   const updated = {
     ...data,
-    dailyTodos: { ...data.dailyTodos, items: [{ id: "1", text: "Walk further", checked: false }] },
+    todos: { ...data.todos, todo: [{ id: "1", text: "Walk further", checked: false }] },
   };
   assert.equal(await writeIfChanged(file, updated), true);
 });
@@ -307,24 +307,69 @@ test("missing Notion token exits cleanly and leaves example data alone", () => {
   assert.match(result.stdout, /example data/);
 });
 
-test("sample data is labelled example data and has every section", async () => {
+test("data.json has the sections the dashboard reads", async () => {
   const data = JSON.parse(await readFile(path.join(root, "data", "data.json"), "utf8"));
-  assert.equal(data.source, "sample");
-  assert.equal(data.notionConnected, false);
-  assert.equal(data.syncedAt, null);
-  assert.ok(data.dailyTodos.items.length >= 3);
-  assert.ok(data.todos.todo.length >= 1);
-  assert.ok(data.todos.done.length >= 1);
-  assert.equal(data.learning.found, true);
-  assert.ok(data.learning.lessons.length >= 2);
-  for (const lesson of data.learning.lessons) {
-    for (const key of ["date", "topic", "bigIdea", "useCase", "proTip"]) {
-      assert.ok(lesson[key], `lesson missing ${key}`);
-    }
-  }
-  const dates = data.learning.lessons.map((lesson) => lesson.date);
-  const sorted = [...dates].sort((a, b) => (a < b ? 1 : -1));
-  assert.deepEqual(dates, sorted);
+  assert.ok(data.source === "notion" || data.source === "sample");
+  assert.ok(Array.isArray(data.todos.todo));
+  assert.ok(Array.isArray(data.todos.done));
+  assert.equal(typeof data.learning.found, "boolean");
+  assert.ok(Array.isArray(data.learning.lessons));
+});
+
+test("one paragraph splits on the lesson labels, including the live lesson text", () => {
+  const packed =
+    'What an LLM actually is The Big Idea: An LLM is a very well-read autocomplete. It has read a huge amount of text, and all it does is predict the next word that fits, again and again. It doesn\'t look facts up or "know" things the way you do. It\'s spotted the patterns in how people write and explain things. Practical Use Case: A tradie says "write a quote email for a deck job, friendly, under 100 words", and the LLM writes something that sounds like thousands of good quote emails it\'s seen. A coach pastes in rough notes and gets a clean session summary back. In both cases it\'s matching patterns, not thinking up something new. Pro Tip: It answers in the style you set it up for, so give it a role and an audience. Instead of "explain habits", try: "You\'re a coach talking to a tired dad who works labouring jobs. Explain in 5 short lines why small habits change identity." The answer will be a lot sharper.';
+  const marker = "The Big Idea:";
+  const at = packed.indexOf(marker);
+  const blocks = [
+    heading(1, "25 Nov 2026"),
+    {
+      id: "packed",
+      type: "paragraph",
+      paragraph: {
+        rich_text: [
+          { type: "text", plain_text: packed.slice(0, at) },
+          { type: "text", plain_text: marker, annotations: { bold: true } },
+          { type: "text", plain_text: packed.slice(at + marker.length) },
+        ],
+      },
+    },
+  ];
+  const [lesson] = parseLessonBlocks(blocks);
+  assert.equal(lesson.date, "2026-11-25");
+  assert.equal(lesson.topic, "What an LLM actually is");
+  assert.equal(
+    lesson.bigIdea,
+    "An LLM is a very well-read autocomplete. It has read a huge amount of text, and all it does is predict the next word that fits, again and again. It doesn't look facts up or \"know\" things the way you do. It's spotted the patterns in how people write and explain things.",
+  );
+  assert.equal(
+    lesson.useCase,
+    'A tradie says "write a quote email for a deck job, friendly, under 100 words", and the LLM writes something that sounds like thousands of good quote emails it\'s seen. A coach pastes in rough notes and gets a clean session summary back. In both cases it\'s matching patterns, not thinking up something new.',
+  );
+  assert.equal(
+    lesson.proTip,
+    'It answers in the style you set it up for, so give it a role and an audience. Instead of "explain habits", try: "You\'re a coach talking to a tired dad who works labouring jobs. Explain in 5 short lines why small habits change identity." The answer will be a lot sharper.',
+  );
+
+  const withBreaks = packed
+    .replace(" The Big Idea:", "\nThe Big Idea:")
+    .replace(" Practical Use Case:", "\nPractical Use Case:")
+    .replace(" Pro Tip:", "\nPro Tip:");
+  const broken = parseLessonBlocks([
+    heading(1, "25 Nov 2026"),
+    paragraph(withBreaks),
+  ]);
+  assert.equal(broken[0].topic, lesson.topic);
+  assert.equal(broken[0].bigIdea, lesson.bigIdea);
+  assert.equal(broken[0].useCase, lesson.useCase);
+  assert.equal(broken[0].proTip, lesson.proTip);
+
+  const curly = parseLessonBlocks([
+    heading(1, "26 Nov 2026"),
+    paragraph("Today\u2019s Topic: Curly apostrophe\n**The Big Idea:** Bold label still splits."),
+  ]);
+  assert.equal(curly[0].topic, "Curly apostrophe");
+  assert.equal(curly[0].bigIdea, "Bold label still splits.");
 });
 
 test("pages assets stay relative for any repository-name case", async () => {

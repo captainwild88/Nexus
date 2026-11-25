@@ -1,6 +1,6 @@
 # NEXUS
 
-Brody's personal dashboard. A dark sci-fi home screen for today's to-dos, ongoing tasks, goals, and daily AI lessons.
+Brody's personal dashboard. A dark sci-fi home screen for to-dos, goals, and daily AI lessons.
 
 **Live site:** https://captainwild88.github.io/Nexus/
 
@@ -30,6 +30,5 @@ GitHub Actions:
 
 Page ids used by the sync:
 
-- Daily To-Dos: `420bc823-fc97-8157-bd78-c1a175e4ab8c`
 - To-Dos: `422bc823-fc97-813d-bfb2-cfb693d9102c`
 - Daily Learning: found by the title `Daily Learning`

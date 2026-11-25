@@ -6,14 +6,12 @@ import {
   assembleLessons,
   findChildDatabases,
   findChildPageRefs,
-  parseDailyTodos,
   parseLearningDatabase,
   parseOngoingTodos,
   perthISODate,
   pickLearningResult,
 } from "./parse-notion.mjs";
 
-export const DAILY_TODOS_PAGE_ID = "420bc823-fc97-8157-bd78-c1a175e4ab8c";
 export const TODOS_PAGE_ID = "422bc823-fc97-813d-bfb2-cfb693d9102c";
 export const LEARNING_PAGE_TITLE = "Daily Learning";
 
@@ -122,7 +120,6 @@ function emptyPayload() {
     source: "notion",
     notionConnected: true,
     syncedAt: new Date().toISOString(),
-    dailyTodos: { title: "Daily To-Dos", items: [], error: null },
     todos: { title: "To-Dos", todo: [], done: [], error: null },
     learning: { found: false, lessons: [], error: null },
   };
@@ -238,12 +235,6 @@ export async function runSync() {
   };
 
   try {
-    const dailyResult = await guard("Daily To-Dos", async () => {
-      const blocks = await hydrate(DAILY_TODOS_PAGE_ID, token);
-      data.dailyTodos.items = parseDailyTodos(blocks);
-    });
-    if (dailyResult instanceof Error) data.dailyTodos.error = friendly(dailyResult);
-
     const todoResult = await guard("To-Dos", async () => {
       const blocks = await hydrate(TODOS_PAGE_ID, token);
       const split = parseOngoingTodos(blocks);
@@ -271,14 +262,14 @@ export async function runSync() {
     return { skipped: false, changed: false, failed: true };
   }
 
-  const sections = [data.dailyTodos.error, data.todos.error, data.learning.error].filter(Boolean);
-  if (sections.length === 3 && hardFailures.length === 3) {
+  const sections = [data.todos.error, data.learning.error].filter(Boolean);
+  if (sections.length === 2 && hardFailures.length === 2) {
     console.error("Notion could not be reached. data.json was not changed.");
     return { skipped: false, changed: false, failed: true };
   }
 
   console.log(
-    `Daily to-dos: ${data.dailyTodos.items.length}. Ongoing: ${data.todos.todo.length} open, ${data.todos.done.length} done. Lessons: ${data.learning.lessons.length}.`,
+    `To-dos: ${data.todos.todo.length} open, ${data.todos.done.length} done. Lessons: ${data.learning.lessons.length}.`,
   );
 
   const changed = await writeIfChanged(dataFilePath(), data);

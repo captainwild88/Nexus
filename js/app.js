@@ -488,22 +488,6 @@ function renderArchiveLesson(lesson) {
   return h("details", { class: "past-lesson" }, [summary, lessonCards(lesson)]);
 }
 
-function renderDaily(data) {
-  const section = data.dailyTodos || {};
-  const count = document.querySelector("#daily-count");
-  const mount = document.querySelector("#daily-mount");
-  if (section.error) {
-    count.hidden = true;
-    mount.replaceChildren(h("p", { class: "empty", text: section.error }));
-    return;
-  }
-  const items = Array.isArray(section.items) ? section.items : [];
-  const open = items.filter((item) => !item.checked).length;
-  count.hidden = false;
-  count.textContent = open === 1 ? "1 open" : `${open} open`;
-  mount.replaceChildren(taskList(items, "Nothing on today's list. Enjoy the clear space."));
-}
-
 function renderOngoing(data) {
   const section = data.todos || {};
   const mount = document.querySelector("#ongoing-mount");
@@ -572,7 +556,7 @@ function applySource(data) {
     : "Not synced yet";
 
   const banner = document.querySelector("#banner");
-  const errors = [data.dailyTodos?.error, data.todos?.error, data.learning?.error].filter(Boolean);
+  const errors = [data.todos?.error, data.learning?.error].filter(Boolean);
   if (example) {
     banner.hidden = false;
     banner.textContent =
@@ -589,7 +573,6 @@ function applySource(data) {
 
 function renderNotion(data) {
   applySource(data || {});
-  renderDaily(data || {});
   renderOngoing(data || {});
   renderLearning(data || {});
 }
@@ -606,7 +589,7 @@ async function loadNotion() {
     banner.textContent = "The dashboard lists could not be loaded. Goals saved on this device still work.";
     document.querySelector("#link-state").textContent = "Lists unavailable";
     document.querySelector("#sync-line").textContent = "Not synced yet";
-    for (const id of ["#daily-mount", "#ongoing-mount", "#learning-mount"]) {
+    for (const id of ["#ongoing-mount", "#learning-mount"]) {
       document.querySelector(id).replaceChildren(h("p", { class: "empty", text: "Could not load this section." }));
     }
   }

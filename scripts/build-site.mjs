@@ -38,7 +38,7 @@ for (const match of css.matchAll(/url\(([^)]+)\)/g)) {
 }
 
 const data = JSON.parse(await readFile(path.join(out, "data", "data.json"), "utf8"));
-for (const key of ["dailyTodos", "todos", "learning", "source"]) {
+for (const key of ["todos", "learning", "source"]) {
   if (!(key in data)) throw new Error(`data.json is missing ${key}`);
 }
 

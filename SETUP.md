@@ -1,6 +1,6 @@
 # Set up NEXUS
 
-NEXUS is your dashboard: today's to-dos, your bigger to-do list, goals, and daily lessons.
+NEXUS is your dashboard: your to-do list, goals, and daily lessons.
 
 The website address is:
 
@@ -50,9 +50,8 @@ The token is a password that lets GitHub read your Notion pages. It stays in Git
 
 The integration cannot see a page until you invite it.
 
-Share these pages:
+Share this page:
 
-- **Daily To-Dos**
 - **To-Dos**
 
 When you have a page titled **Daily Learning**, share that too. The hourly update finds it by that exact title. Until the page exists, Daily Learning shows a short empty message. That is normal.

@@ -346,8 +346,43 @@ const FIELD_ONLY = [
   ["date", /^date$/i],
 ];
 
+function normalizeLessonText(text) {
+  return stripEmoji(text)
+    .replace(/[\u200B\u200C\u200D\uFEFF]/g, "")
+    .replace(/[\u2018\u2019\u02BC]/g, "'")
+    .replace(/\*\*|__/g, "")
+    .replace(/：/g, ":");
+}
+
+function labelToField(label) {
+  const name = label.toLowerCase().replace(/\s+/g, " ").trim();
+  if (name === "today's topic") return "topic";
+  if (name === "the big idea" || name === "big idea") return "bigIdea";
+  if (name === "practical use case" || name === "use case") return "useCase";
+  if (name === "pro tip") return "proTip";
+  return null;
+}
+
+function splitLabeled(text) {
+  const pattern = /(today's\s+topic|practical\s+use\s+case|the\s+big\s+idea|pro\s+tip|use\s+case|big\s+idea)\s*[:\-–—]/gi;
+  const matches = [...text.matchAll(pattern)];
+  if (!matches.length) return null;
+  const pieces = [];
+  let cursor = 0;
+  for (const match of matches) {
+    const before = text.slice(cursor, match.index).trim();
+    if (before) pieces.push({ text: before });
+    const field = labelToField(match[1]);
+    if (field) pieces.push({ field });
+    cursor = match.index + match[0].length;
+  }
+  const after = text.slice(cursor).trim();
+  if (after) pieces.push({ text: after });
+  return pieces.length ? pieces : null;
+}
+
 function matchInlineField(text) {
-  const cleaned = stripEmoji(text).replace(/\s+/g, " ").trim();
+  const cleaned = text.replace(/\s+/g, " ").trim();
   for (const [field, pattern] of FIELD_PATTERNS) {
     const match = cleaned.match(pattern);
     if (match) return { field, value: (match[1] || "").trim() };
@@ -453,39 +488,68 @@ export function parseLessonBlocks(blocks) {
       continue;
     }
 
-    const raw = node.text || "";
-    const inline = matchInlineField(raw);
+    const normalized = normalizeLessonText(node.text || "");
+    const dated = node.kind === "heading" ? splitDateHeading(normalized) : null;
+    const labeledSource = dated ? dated.rest : normalized;
+    const pieces = splitLabeled(labeledSource);
+
+    const applyLabeled = (parts, activeField) => {
+      let active = activeField;
+      for (const part of parts) {
+        if (part.field) {
+          active = part.field;
+          field = part.field;
+          continue;
+        }
+        if (!part.text) continue;
+        if (active) assign(active, part.text, true);
+        else assign("topic", part.text, true);
+      }
+    };
+
+    if (dated && !pieces) {
+      if (hasContent()) flush();
+      current.date = dated.date;
+      if (dated.rest) assign("topic", dated.rest, true);
+      field = null;
+      continue;
+    }
+    if (dated && pieces) {
+      if (hasContent()) flush();
+      current.date = dated.date;
+      field = null;
+      applyLabeled(pieces, null);
+      continue;
+    }
+    if (pieces) {
+      applyLabeled(pieces, field);
+      continue;
+    }
+
+    const inline = matchInlineField(normalized);
     if (inline) {
       field = inline.field;
       if (inline.value) assign(inline.field, inline.value, true);
       continue;
     }
-    const label = matchFieldLabel(raw);
+    const label = matchFieldLabel(normalized);
     if (label) {
       field = label;
       continue;
     }
 
     if (node.kind === "heading") {
-      const dated = splitDateHeading(raw);
-      if (dated) {
-        if (hasContent()) flush();
-        current.date = dated.date;
-        if (dated.rest) assign("topic", dated.rest, true);
-        field = null;
-        continue;
-      }
       if (node.level <= 2 && hasContent()) flush();
-      assign(field || "topic", stripEmoji(raw), Boolean(field));
+      assign(field || "topic", normalized, Boolean(field));
       if (!field) field = null;
       continue;
     }
 
-    if (field) assign(field, raw, true);
-    else if (!current.topic) assign("topic", raw, false);
-    else if (!current.bigIdea) assign("bigIdea", raw, false);
-    else if (!current.useCase) assign("useCase", raw, false);
-    else assign("proTip", raw, false);
+    if (field) assign(field, normalized, true);
+    else if (!current.topic) assign("topic", normalized, false);
+    else if (!current.bigIdea) assign("bigIdea", normalized, false);
+    else if (!current.useCase) assign("useCase", normalized, false);
+    else assign("proTip", normalized, false);
   }
 
   if (hasContent()) flush();
