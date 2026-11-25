@@ -1,0 +1,113 @@
+name: Deploy Cloudflare Worker
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "worker/**"
+      - ".github/workflows/deploy-worker.yml"
+      - "scripts/write-worker-config.mjs"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: nexus-goals-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Check Cloudflare secrets
+        id: secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NEXUS_PASSCODE: ${{ secrets.NEXUS_PASSCODE }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: |
+          set -eu
+          missing=0
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then echo "CLOUDFLARE_API_TOKEN is not set."; missing=1; fi
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then echo "CLOUDFLARE_ACCOUNT_ID is not set."; missing=1; fi
+          if [ -z "$NEXUS_PASSCODE" ]; then echo "NEXUS_PASSCODE is not set."; missing=1; fi
+          if [ -z "$NOTION_TOKEN" ]; then echo "NOTION_TOKEN is not set."; missing=1; fi
+          if [ "$missing" = "1" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Cloudflare is not set up yet. Skipping the Worker deploy."
+            exit 0
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Install Wrangler
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: worker
+        run: npm install --no-save --no-audit --no-fund wrangler@4.168.0
+
+      - name: Publish the Worker
+        id: publish
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NEXUS_PASSCODE: ${{ secrets.NEXUS_PASSCODE }}
+        run: |
+          set -euo pipefail
+          npx wrangler deploy 2>&1 | tee "$RUNNER_TEMP/wrangler.txt"
+          printf '%s' "$NOTION_TOKEN" | npx wrangler secret put NOTION_TOKEN
+          printf '%s' "$NEXUS_PASSCODE" | npx wrangler secret put NEXUS_PASSCODE
+          url=$(grep -Eo 'https://[A-Za-z0-9.-]+\.workers\.dev' "$RUNNER_TEMP/wrangler.txt" | head -n 1 || true)
+          if [ -z "$url" ]; then
+            subdomain=$(curl -fsS \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" \
+              | node -e 'let raw=""; process.stdin.on("data", (chunk) => { raw += chunk; }); process.stdin.on("end", () => { const body = JSON.parse(raw); if (!body.success || !body.result || !body.result.subdomain) process.exit(1); process.stdout.write(body.result.subdomain); });')
+            url="https://nexus-goals.${subdomain}.workers.dev"
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Worker address: $url"
+
+      - name: Save the Worker address in the site
+        id: config
+        if: steps.secrets.outputs.ready == 'true'
+        run: node scripts/write-worker-config.mjs js/config.js "${{ steps.publish.outputs.url }}"
+
+      - name: Commit the Worker address when it changed
+        id: commit
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          set -eu
+          if git diff --quiet -- js/config.js; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Site config already has the Worker address."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/config.js
+          git commit -m "chore: save the goals Worker address"
+          git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the updated site
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy.yml --ref main

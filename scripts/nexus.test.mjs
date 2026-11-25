@@ -383,6 +383,9 @@ test("pages assets stay relative for any repository-name case", async () => {
   assert.doesNotMatch(css, /url\(\s*["']?\//);
   assert.match(css, /url\("\.\/fonts\//);
   assert.match(js, /new URL\("\.\/data\/data\.json", document\.baseURI\)/);
+  assert.match(js, /from "\.\/config\.js"/);
+  const config = await readFile(path.join(root, "js", "config.js"), "utf8");
+  assert.match(config, /export const workerUrl = ""/);
   assert.doesNotMatch(`${html}\n${css}\n${js}`, /github\.io\/nexus/i);
   const readme = await readFile(path.join(root, "README.md"), "utf8");
   const setup = await readFile(path.join(root, "SETUP.md"), "utf8");
@@ -410,6 +413,15 @@ test("workflows sync hourly, skip a missing secret, and deploy with Actions", as
   assert.match(sync, /git diff --quiet -- data\/data\.json/);
   assert.match(sync, /gh workflow run deploy\.yml/);
   assert.match(sync, /contents: write/);
+  const workerFlow = await readFile(path.join(root, ".github/workflows/deploy-worker.yml"), "utf8");
+  assert.match(workerFlow, /CLOUDFLARE_API_TOKEN/);
+  assert.match(workerFlow, /CLOUDFLARE_ACCOUNT_ID/);
+  assert.match(workerFlow, /NEXUS_PASSCODE/);
+  assert.match(workerFlow, /NOTION_TOKEN/);
+  assert.match(workerFlow, /Skipping the Worker deploy/);
+  assert.match(workerFlow, /wrangler secret put NOTION_TOKEN/);
+  assert.match(workerFlow, /wrangler secret put NEXUS_PASSCODE/);
+  assert.doesNotMatch(await readFile(path.join(root, "worker/wrangler.toml"), "utf8"), /NOTION_TOKEN|NEXUS_PASSCODE|api_token/i);
 });
 
 test("sample file is untouched when the token is blank", async () => {

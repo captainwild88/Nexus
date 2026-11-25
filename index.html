@@ -75,6 +75,20 @@
               <h2 id="goals-heading">Goals</h2>
             </div>
           </div>
+          <form id="passcode-form" class="goal-form" hidden>
+            <label class="sr-only" for="passcode-input">NEXUS passcode</label>
+            <input
+              id="passcode-input"
+              type="password"
+              maxlength="200"
+              autocomplete="current-password"
+              placeholder="NEXUS passcode"
+            />
+            <button class="btn btn-primary" type="submit">Unlock</button>
+          </form>
+          <p id="passcode-note" class="hint" hidden>
+            Type the passcode once on this device. Your goals then stay in sync.
+          </p>
           <form id="goal-form" class="goal-form">
             <label class="sr-only" for="goal-input">New goal</label>
             <input
@@ -89,16 +103,18 @@
             />
             <button class="btn btn-primary" type="submit">Add</button>
           </form>
-          <p class="hint">Tick a goal when it is done. It moves to the Hall of Wins.</p>
+          <p id="goal-sync-hint" class="hint">Tick a goal when it is done. It moves to the Hall of Wins.</p>
           <p class="sr-only" id="goal-hint">Tick to move a goal to the Hall of Wins.</p>
           <ul id="goal-list" class="goal-list" aria-describedby="goal-hint"></ul>
           <p id="goal-empty" class="empty">No goals yet. Type one above and tap Add.</p>
           <div class="backup">
             <button id="export-goals" class="btn btn-ghost" type="button">Export backup</button>
             <button id="import-goals" class="btn btn-ghost" type="button">Import backup</button>
+            <button id="change-passcode" class="btn btn-ghost" type="button" hidden>Change passcode</button>
+            <button id="move-local-goals" class="btn btn-ghost" type="button" hidden>Move goals on this device to Notion</button>
             <input id="import-file" type="file" accept="application/json,.json" hidden />
           </div>
-          <p class="hint">The backup file includes open goals and the Hall of Wins. It stays on this device until you export it.</p>
+          <p id="goal-backup-hint" class="hint">The backup file includes open goals and the Hall of Wins. It stays on this device until you export it.</p>
         </section>
 
         <section class="panel" aria-labelledby="wins-heading">
@@ -128,7 +144,7 @@
       </main>
 
       <footer class="wrap footer">
-        <p>Goals and wins stay in this browser. Export a backup before you switch phones.</p>
+        <p>Export a backup of your goals from the Goals panel.</p>
         <p><a href="https://github.com/captainwild88/Nexus/blob/main/SETUP.md">Setup guide</a></p>
       </footer>
     </div>

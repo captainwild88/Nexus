@@ -1,0 +1,5 @@
+{
+  "name": "nexus-goals-worker",
+  "private": true,
+  "type": "module"
+}

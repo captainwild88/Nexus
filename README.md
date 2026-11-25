@@ -4,7 +4,7 @@ Brody's personal dashboard. A dark sci-fi home screen for to-dos, goals, and dai
 
 **Live site:** https://captainwild88.github.io/Nexus/
 
-To-do lists and lessons are read from Notion. Goals and the Hall of Wins stay in the browser, with a JSON backup you can export and import.
+To-do lists and lessons are read from Notion. Goals stay on this device until the Cloudflare Worker is connected, then they sync through the NEXUS Goals database. Export backup still downloads a copy.
 
 New here? Read [SETUP.md](SETUP.md). It walks through turning on GitHub Pages, adding the Notion token, and sharing your pages.
 

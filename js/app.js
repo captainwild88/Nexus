@@ -1,4 +1,7 @@
+import { workerUrl } from "./config.js";
+
 const STORAGE_KEY = "nexus.goals.v1";
+const PASSCODE_KEY = "nexus.passcode.v1";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const dataUrl = new URL("./data/data.json", document.baseURI);
@@ -200,6 +203,30 @@ function normaliseBackup(data) {
 
 let goals = emptyGoals();
 let toastTimer = 0;
+let goalsBusy = false;
+let changingPasscode = false;
+
+function remoteEnabled() {
+  return Boolean(String(workerUrl || "").trim());
+}
+
+function workerBase() {
+  return String(workerUrl || "").trim().replace(/\/$/, "");
+}
+
+function readStoredGoals() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? normaliseBackup(JSON.parse(raw)) : emptyGoals();
+  } catch {
+    return emptyGoals();
+  }
+}
+
+function hasStoredGoals() {
+  const stored = readStoredGoals();
+  return stored.active.length + stored.wins.length > 0;
+}
 
 function toast(message) {
   const node = document.querySelector("#toast");
@@ -220,6 +247,7 @@ function sortedGoals() {
 
 function saveGoals() {
   goals = sortedGoals();
+  if (remoteEnabled()) return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, ...goals }));
   } catch {
@@ -228,11 +256,62 @@ function saveGoals() {
 }
 
 function loadGoals() {
+  goals = readStoredGoals();
+}
+
+function updateGoalMode() {
+  const remote = remoteEnabled();
+  const passcode = localStorage.getItem(PASSCODE_KEY) || "";
+  const locked = remote && !passcode;
+  const showPasscode = remote && (locked || changingPasscode);
+  document.querySelector("#passcode-form").hidden = !showPasscode;
+  document.querySelector("#passcode-note").hidden = !remote;
+  document.querySelector("#goal-form").hidden = locked;
+  document.querySelector("#change-passcode").hidden = !remote || locked || changingPasscode;
+  document.querySelector("#move-local-goals").hidden = !(remote && passcode && hasStoredGoals());
+  document.querySelector("#goal-sync-hint").textContent = remote
+    ? "Tick a goal when it is done. It moves to the Hall of Wins on every device you unlock."
+    : "Tick a goal when it is done. It moves to the Hall of Wins.";
+  document.querySelector("#goal-backup-hint").textContent = remote
+    ? "Export backup downloads a copy. The goals themselves are saved in Notion."
+    : "The backup file includes open goals and the Hall of Wins. It stays on this device until you export it.";
+}
+
+async function goalsApi(path, options = {}) {
+  const response = await fetch(`${workerBase()}${path}`, {
+    method: options.method || "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Nexus-Passcode": localStorage.getItem(PASSCODE_KEY) || "",
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  let data = null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    goals = raw ? normaliseBackup(JSON.parse(raw)) : emptyGoals();
+    data = await response.json();
   } catch {
-    goals = emptyGoals();
+    data = null;
+  }
+  return { ok: response.ok, status: response.status, data };
+}
+
+function failureMessage(result, fallback) {
+  if (result.status === 401) return "That passcode was not accepted.";
+  return result.data?.error || fallback;
+}
+
+function placeGoal(goal, tempId) {
+  goals.active = goals.active.filter((item) => item.id !== goal.id && item.id !== tempId);
+  goals.wins = goals.wins.filter((item) => item.id !== goal.id && item.id !== tempId);
+  if (goal.done) {
+    goals.wins.unshift({
+      id: goal.id,
+      text: goal.text,
+      createdAt: goal.createdAt,
+      completedAt: goal.completedAt || new Date().toISOString(),
+    });
+  } else {
+    goals.active.unshift({ id: goal.id, text: goal.text, createdAt: goal.createdAt });
   }
 }
 
@@ -256,7 +335,8 @@ function renderGoals() {
   const list = document.querySelector("#goal-list");
   const empty = document.querySelector("#goal-empty");
   list.replaceChildren();
-  empty.hidden = view.active.length > 0;
+  const locked = remoteEnabled() && !localStorage.getItem(PASSCODE_KEY);
+  empty.hidden = locked || view.active.length > 0;
   for (const goal of view.active) {
     list.append(
       h("li", { class: "goal", "data-id": goal.id }, [
@@ -298,44 +378,108 @@ function renderGoals() {
   }
 }
 
-function addGoal(text) {
-  const clean = cleanGoalText(text);
-  if (!clean) return;
-  goals.active.unshift({ id: uid(), text: clean.slice(0, 200), createdAt: new Date().toISOString() });
-  saveGoals();
+async function withGoalChange(applyLocal, request, successToast, fallback) {
+  if (goalsBusy) {
+    toast("Still saving the last change.");
+    return false;
+  }
+  if (!remoteEnabled()) {
+    applyLocal();
+    saveGoals();
+    renderGoals();
+    if (successToast) toast(successToast);
+    return true;
+  }
+  const snapshot = structuredClone(goals);
+  applyLocal();
   renderGoals();
-  toast("Goal added.");
+  goalsBusy = true;
+  try {
+    const result = await request();
+    if (!result.ok) {
+      if (result.status === 401) {
+        localStorage.removeItem(PASSCODE_KEY);
+        changingPasscode = false;
+        updateGoalMode();
+      }
+      throw new Error(failureMessage(result, fallback));
+    }
+    if (result.data?.goal) placeGoal(result.data.goal, result.tempId);
+    renderGoals();
+    if (successToast) toast(successToast);
+    return true;
+  } catch (error) {
+    goals = snapshot;
+    renderGoals();
+    toast(error.message || fallback);
+    return false;
+  } finally {
+    goalsBusy = false;
+  }
+}
+
+function addGoal(text) {
+  const clean = cleanGoalText(text).slice(0, 200);
+  if (!clean) return;
+  const tempId = `temp-${uid()}`;
+  withGoalChange(
+    () => {
+      goals.active.unshift({ id: tempId, text: clean, createdAt: new Date().toISOString() });
+    },
+    async () => {
+      const result = await goalsApi("/goals", { method: "POST", body: { text: clean } });
+      result.tempId = tempId;
+      return result;
+    },
+    "Goal added.",
+    "Could not save that goal. It has been put back.",
+  );
 }
 
 function completeGoal(id) {
   const goal = goals.active.find((item) => item.id === id);
   if (!goal) return;
-  goals.active = goals.active.filter((item) => item.id !== id);
-  goals.wins.unshift({ ...goal, completedAt: new Date().toISOString() });
-  saveGoals();
-  renderGoals();
-  toast("Moved to the Hall of Wins.");
+  withGoalChange(
+    () => {
+      goals.active = goals.active.filter((item) => item.id !== id);
+      goals.wins.unshift({ ...goal, completedAt: new Date().toISOString() });
+    },
+    () => goalsApi(`/goals/${id}/done`, { method: "POST" }),
+    "Moved to the Hall of Wins.",
+    "Could not mark that goal done. It has been put back.",
+  );
 }
 
 function undoWin(id) {
   const win = goals.wins.find((item) => item.id === id);
   if (!win) return;
-  goals.wins = goals.wins.filter((item) => item.id !== id);
-  const { completedAt, ...goal } = win;
-  goals.active.unshift(goal);
-  saveGoals();
-  renderGoals();
-  toast("Moved back to Goals.");
+  withGoalChange(
+    () => {
+      goals.wins = goals.wins.filter((item) => item.id !== id);
+      const { completedAt, ...goal } = win;
+      goals.active.unshift(goal);
+    },
+    () => goalsApi(`/goals/${id}/undo`, { method: "POST" }),
+    "Moved back to Goals.",
+    "Could not undo that win. It has been put back.",
+  );
 }
 
 function removeGoal(id) {
   const goal = goals.active.find((item) => item.id === id);
   if (!goal) return;
-  if (!window.confirm("Remove this goal? It will not be saved in the Hall of Wins.")) return;
-  goals.active = goals.active.filter((item) => item.id !== id);
-  saveGoals();
-  renderGoals();
-  toast("Goal removed.");
+  const message = remoteEnabled()
+    ? "Remove this goal from Notion? It will not be saved in the Hall of Wins."
+    : "Remove this goal? It will not be saved in the Hall of Wins.";
+  if (!window.confirm(message)) return;
+  withGoalChange(
+    () => {
+      goals.active = goals.active.filter((item) => item.id !== id);
+    },
+    () => goalsApi(`/goals/${id}`, { method: "DELETE" }),
+    "Goal removed.",
+    "Could not remove that goal. It has been put back.",
+  );
 }
 
 function exportGoals() {
@@ -360,14 +504,32 @@ function importGoals(file) {
   reader.onload = () => {
     try {
       const next = normaliseBackup(JSON.parse(String(reader.result)));
+      const tally = (count, one, many) => `${count} ${count === 1 ? one : many}`;
+      const summary = `${tally(next.active.length, "open goal", "open goals")} and ${tally(next.wins.length, "win", "wins")}`;
+      if (remoteEnabled()) {
+        if (!localStorage.getItem(PASSCODE_KEY)) {
+          toast("Enter your passcode before importing a backup.");
+          return;
+        }
+        if (!window.confirm(`Add ${summary} from this file to Notion?`)) return;
+        goalsApi("/goals/import", { method: "POST", body: { active: next.active, wins: next.wins } })
+          .then((result) => {
+            if (!result.ok) {
+              toast(failureMessage(result, "Could not add that backup to Notion."));
+              return;
+            }
+            goals = { active: result.data.active || [], wins: result.data.wins || [] };
+            renderGoals();
+            toast(`Added ${summary} to Notion.`);
+          })
+          .catch(() => toast("Could not add that backup to Notion."));
+        return;
+      }
       if (!window.confirm("Replace the goals and wins saved in this browser with this file?")) return;
       goals = next;
       saveGoals();
       renderGoals();
-      const tally = (count, one, many) => `${count} ${count === 1 ? one : many}`;
-      toast(
-        `Imported ${tally(next.active.length, "open goal", "open goals")} and ${tally(next.wins.length, "win", "wins")}.`,
-      );
+      toast(`Imported ${summary}.`);
     } catch (error) {
       toast(error.message || "That file could not be read.");
     }
@@ -404,11 +566,118 @@ function bindGoals() {
     fileInput.value = "";
     if (file) importGoals(file);
   });
+  document.querySelector("#passcode-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const input = document.querySelector("#passcode-input");
+    savePasscode(input.value);
+    input.value = "";
+  });
+  document.querySelector("#change-passcode").addEventListener("click", () => {
+    changingPasscode = true;
+    updateGoalMode();
+    document.querySelector("#passcode-input").focus();
+  });
+  document.querySelector("#move-local-goals").addEventListener("click", moveStoredGoals);
   window.addEventListener("storage", (event) => {
-    if (event.key !== STORAGE_KEY) return;
+    if (event.key !== STORAGE_KEY || remoteEnabled()) return;
     loadGoals();
     renderGoals();
   });
+}
+
+async function savePasscode(value) {
+  const next = String(value || "").trim();
+  if (!next) {
+    toast("Type the passcode first.");
+    return;
+  }
+  const previous = localStorage.getItem(PASSCODE_KEY);
+  localStorage.setItem(PASSCODE_KEY, next);
+  try {
+    const result = await goalsApi("/goals");
+    if (!result.ok) {
+      if (previous) localStorage.setItem(PASSCODE_KEY, previous);
+      else localStorage.removeItem(PASSCODE_KEY);
+      toast(failureMessage(result, "Could not load goals."));
+      updateGoalMode();
+      return;
+    }
+    changingPasscode = false;
+    goals = { active: result.data.active || [], wins: result.data.wins || [] };
+    renderGoals();
+    updateGoalMode();
+    toast("Passcode saved on this device.");
+  } catch {
+    if (previous) localStorage.setItem(PASSCODE_KEY, previous);
+    else localStorage.removeItem(PASSCODE_KEY);
+    updateGoalMode();
+    toast("Could not reach the goals service.");
+  }
+}
+
+async function moveStoredGoals() {
+  const stored = readStoredGoals();
+  if (!stored.active.length && !stored.wins.length) return;
+  if (goalsBusy) {
+    toast("Still saving the last change.");
+    return;
+  }
+  goalsBusy = true;
+  try {
+    const result = await goalsApi("/goals/import", {
+      method: "POST",
+      body: { active: stored.active, wins: stored.wins },
+    });
+    if (!result.ok) {
+      toast(failureMessage(result, "Could not move those goals. They are still on this device."));
+      return;
+    }
+    localStorage.removeItem(STORAGE_KEY);
+    goals = { active: result.data.active || [], wins: result.data.wins || [] };
+    renderGoals();
+    updateGoalMode();
+    toast("Goals on this device are now in Notion.");
+  } catch {
+    toast("Could not move those goals. They are still on this device.");
+  } finally {
+    goalsBusy = false;
+  }
+}
+
+async function startGoals() {
+  updateGoalMode();
+  if (!remoteEnabled()) {
+    loadGoals();
+    renderGoals();
+    return;
+  }
+  if (!localStorage.getItem(PASSCODE_KEY)) {
+    goals = emptyGoals();
+    renderGoals();
+    return;
+  }
+  try {
+    const result = await goalsApi("/goals");
+    if (!result.ok) {
+      if (result.status === 401) {
+        localStorage.removeItem(PASSCODE_KEY);
+        updateGoalMode();
+        toast("That passcode was not accepted.");
+      } else {
+        toast(failureMessage(result, "Could not load goals."));
+      }
+      goals = emptyGoals();
+      renderGoals();
+      return;
+    }
+    goals = { active: result.data.active || [], wins: result.data.wins || [] };
+    renderGoals();
+    updateGoalMode();
+  } catch {
+    goals = emptyGoals();
+    renderGoals();
+    toast("Could not reach the goals service.");
+  }
 }
 
 function taskList(items, emptyText) {
@@ -597,7 +866,6 @@ async function loadNotion() {
 
 startClock();
 startParticles();
-loadGoals();
 bindGoals();
-renderGoals();
+startGoals();
 loadNotion();

@@ -74,3 +74,26 @@ To update sooner, open the **Actions** tab, click **Sync Notion data**, then **R
 Your goals are not stored in Notion. They are saved in the browser. On the Goals panel, **Export backup** downloads a file. Keep that file somewhere safe. **Import backup** puts it back on a new phone.
 
 One privacy note: this website is public. Anything copied from Notion can be read by anyone with the link. Keep passwords and private details off those pages.
+
+## 4. Sync goals between your phone and computer
+
+Goals stay on one device until this step. After it, adding or ticking a goal on the website updates Notion, so the other device shows it too.
+
+1. Create a free Cloudflare account at https://dash.cloudflare.com/sign-up
+2. Open https://dash.cloudflare.com/profile/api-tokens and click **Create Token**.
+3. Find the template **Edit Cloudflare Workers** and use it. Then click **Create Token** and copy the token. Cloudflare shows it only once.
+4. Open https://dash.cloudflare.com and click **Workers & Pages**. Your **Account ID** is on the right. Copy it.
+5. Pick a passcode, a short phrase you can type on a new phone. This is not your Notion token.
+6. Open https://github.com/captainwild88/Nexus/settings/secrets/actions and add three repository secrets:
+   - `CLOUDFLARE_API_TOKEN` — the token from step 3
+   - `CLOUDFLARE_ACCOUNT_ID` — the id from step 4
+   - `NEXUS_PASSCODE` — the phrase from step 5
+7. In Notion, open the **NEXUS Goals** database, click **Share**, add a connection, and choose **NEXUS**.
+8. On GitHub, open the **Actions** tab, click **Deploy Cloudflare Worker**, then **Run workflow**.
+
+When that finishes, it saves the Worker address into the site and publishes again. You do not copy the address yourself. Cloudflare names it `https://nexus-goals.` plus your workers.dev name, which you can also see at the top of the `nexus-goals` Worker page.
+
+9. Open https://captainwild88.github.io/Nexus/ and type the passcode once. It stays on that device.
+10. If this phone already has goals, tap **Move goals on this device to Notion**. They then leave this device and live in Notion.
+
+**Change passcode** on the Goals panel saves a different phrase on this device. It has to match the `NEXUS_PASSCODE` secret. Export backup still downloads a copy.
