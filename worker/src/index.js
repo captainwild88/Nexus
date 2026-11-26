@@ -1,4 +1,13 @@
+import { buildLists, LEARNING_PAGE_ID, TODOS_PAGE_ID } from "../../scripts/notion-board.mjs";
+
 const PASSCODE_HEADER = "x-nexus-passcode";
+const LISTS_CACHE_MS = 60_000;
+
+let listsCache = null;
+
+export function clearListsCache() {
+  listsCache = null;
+}
 
 export function perthDate(value = new Date()) {
   const date = value instanceof Date ? value : new Date(value);
@@ -27,7 +36,7 @@ function corsHeaders(request, env) {
     "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, X-Nexus-Passcode",
     "Access-Control-Max-Age": "86400",
-    Vary: "Origin",
+    Vary: "Origin, X-Nexus-Passcode",
   };
   if (request.headers.get("Origin") === allowedOrigin(env)) {
     headers["Access-Control-Allow-Origin"] = allowedOrigin(env);
@@ -35,12 +44,13 @@ function corsHeaders(request, env) {
   return headers;
 }
 
-function json(request, env, status, body) {
+function json(request, env, status, body, extraHeaders = {}) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
+      ...extraHeaders,
       ...corsHeaders(request, env),
     },
   });
@@ -175,6 +185,38 @@ function notionFailure(error) {
   return "Notion could not save that change.";
 }
 
+async function listChildren(env, blockId) {
+  const results = [];
+  let cursor;
+  do {
+    const query = new URLSearchParams({ page_size: "100" });
+    if (cursor) query.set("start_cursor", cursor);
+    const data = await notion(env, `/blocks/${blockId}/children?${query.toString()}`);
+    results.push(...(data.results || []));
+    cursor = data.has_more ? data.next_cursor : undefined;
+  } while (cursor);
+  return results;
+}
+
+async function liveLists(env, fresh) {
+  if (!fresh && listsCache && Date.now() - listsCache.at < LISTS_CACHE_MS) {
+    return listsCache.value;
+  }
+  const board = await buildLists({
+    listChildren: (blockId) => listChildren(env, blockId),
+    todosPageId: env.TODOS_PAGE_ID || TODOS_PAGE_ID,
+    learningPageId: env.LEARNING_PAGE_ID || LEARNING_PAGE_ID,
+  });
+  const value = {
+    source: "notion",
+    syncedAt: new Date().toISOString(),
+    todos: board.todos,
+    learning: board.learning,
+  };
+  listsCache = { at: Date.now(), value };
+  return value;
+}
+
 export async function handle(request, env = {}) {
   const origin = request.headers.get("Origin");
   if (origin && origin !== allowedOrigin(env)) {
@@ -194,6 +236,12 @@ export async function handle(request, env = {}) {
   const parts = url.pathname.split("/").filter(Boolean);
 
   try {
+    if (request.method === "GET" && parts.length === 1 && parts[0] === "lists") {
+      const fresh = url.searchParams.get("fresh") === "1";
+      const payload = await liveLists(env, fresh);
+      return json(request, env, 200, payload, { "Cache-Control": "private, max-age=60" });
+    }
+
     if (request.method === "GET" && parts.length === 1 && parts[0] === "goals") {
       return json(request, env, 200, splitGoals(await listPages(env)));
     }

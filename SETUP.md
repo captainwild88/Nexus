@@ -67,7 +67,7 @@ Sharing a page shares what is inside it, including sub-pages.
 
 ## What happens next
 
-About once an hour, GitHub reads those pages and updates the site. It only saves a new copy when something actually changed.
+Opening the site reads your To-Dos and Daily Learning from Notion when this device has the passcode saved. Tap **Refresh** next to the clock line if you want the latest right then. GitHub still saves a backup copy about once an hour, and the site uses that copy if the live read does not work.
 
 To update sooner, open the **Actions** tab, click **Sync Notion data**, then **Run workflow**.
 

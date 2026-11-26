@@ -385,7 +385,9 @@ test("pages assets stay relative for any repository-name case", async () => {
   assert.match(js, /new URL\("\.\/data\/data\.json", document\.baseURI\)/);
   assert.match(js, /from "\.\/config\.js"/);
   const config = await readFile(path.join(root, "js", "config.js"), "utf8");
-  assert.match(config, /export const workerUrl = ""/);
+  assert.match(config, /export const workerUrl = "https:\/\/nexus-goals\.[a-z0-9-]+\.workers\.dev"/);
+  assert.match(js, /\/lists/);
+  assert.match(js, /Synced live/);
   assert.doesNotMatch(`${html}\n${css}\n${js}`, /github\.io\/nexus/i);
   const readme = await readFile(path.join(root, "README.md"), "utf8");
   const setup = await readFile(path.join(root, "SETUP.md"), "utf8");

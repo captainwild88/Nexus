@@ -578,6 +578,7 @@ function bindGoals() {
     document.querySelector("#passcode-input").focus();
   });
   document.querySelector("#move-local-goals").addEventListener("click", moveStoredGoals);
+  document.querySelector("#refresh-lists").addEventListener("click", () => loadNotion({ fresh: true }));
   window.addEventListener("storage", (event) => {
     if (event.key !== STORAGE_KEY || remoteEnabled()) return;
     loadGoals();
@@ -607,6 +608,7 @@ async function savePasscode(value) {
     renderGoals();
     updateGoalMode();
     toast("Passcode saved on this device.");
+    loadNotion({ fresh: true });
   } catch {
     if (previous) localStorage.setItem(PASSCODE_KEY, previous);
     else localStorage.removeItem(PASSCODE_KEY);
@@ -705,7 +707,7 @@ function formatISODate(iso) {
   return `${Number(match[3])} ${month} ${match[1]}`;
 }
 
-function formatPerthStamp(iso) {
+function formatPerthStamp(iso, prefix = "Last synced") {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "Not synced yet";
   const formatted = new Intl.DateTimeFormat("en-AU", {
@@ -717,7 +719,7 @@ function formatPerthStamp(iso) {
     minute: "2-digit",
     hour12: true,
   }).format(date);
-  return `Last synced ${formatted} Perth`;
+  return `${prefix} ${formatted} Perth`;
 }
 
 function lessonCards(lesson) {
@@ -816,13 +818,17 @@ function applySource(data) {
   document.querySelectorAll("[data-example]").forEach((node) => {
     node.hidden = !example;
   });
-  document.querySelector("#link-dot").classList.toggle("live", !example);
-  document.querySelector("#link-state").textContent = example
-    ? "Notion not connected yet"
-    : "Notion connected";
+  document.querySelector("#link-dot").classList.toggle("live", Boolean(data.live) || !example);
+  document.querySelector("#link-state").textContent = data.live
+    ? "Synced live"
+    : example
+      ? "Notion not connected yet"
+      : "Saved copy";
   document.querySelector("#sync-line").textContent = data.syncedAt
-    ? formatPerthStamp(data.syncedAt)
-    : "Not synced yet";
+    ? formatPerthStamp(data.syncedAt, data.live ? "Synced live" : "Last synced")
+    : data.live
+      ? "Synced live"
+      : "Not synced yet";
 
   const banner = document.querySelector("#banner");
   const errors = [data.todos?.error, data.learning?.error].filter(Boolean);
@@ -846,21 +852,52 @@ function renderNotion(data) {
   renderLearning(data || {});
 }
 
-async function loadNotion() {
+async function loadSavedCopy() {
+  const response = await fetch(dataUrl, { cache: "no-cache" });
+  if (!response.ok) throw new Error(`Could not load data (${response.status})`);
+  return response.json();
+}
+
+async function loadNotion({ fresh = false } = {}) {
+  const syncLine = document.querySelector("#sync-line");
+  if (fresh) syncLine.textContent = "Refreshing…";
+  let saved = null;
   try {
-    const response = await fetch(dataUrl, { cache: "no-cache" });
-    if (!response.ok) throw new Error(`Could not load data (${response.status})`);
-    renderNotion(await response.json());
+    saved = await loadSavedCopy();
   } catch {
-    document.body.dataset.notion = "error";
-    const banner = document.querySelector("#banner");
-    banner.hidden = false;
-    banner.textContent = "The dashboard lists could not be loaded. Goals saved on this device still work.";
-    document.querySelector("#link-state").textContent = "Lists unavailable";
-    document.querySelector("#sync-line").textContent = "Not synced yet";
-    for (const id of ["#ongoing-mount", "#learning-mount"]) {
-      document.querySelector(id).replaceChildren(h("p", { class: "empty", text: "Could not load this section." }));
+    saved = null;
+  }
+  const canAskLive = remoteEnabled() && localStorage.getItem(PASSCODE_KEY);
+  if (canAskLive) {
+    try {
+      const result = await goalsApi(`/lists${fresh ? "?fresh=1" : ""}`);
+      if (result.ok && result.data?.todos && result.data?.learning) {
+        renderNotion({
+          source: "notion",
+          notionConnected: true,
+          live: true,
+          syncedAt: result.data.syncedAt || new Date().toISOString(),
+          todos: result.data.todos,
+          learning: result.data.learning,
+        });
+        return;
+      }
+    } catch {
+      // The saved copy below is the backup.
     }
+  }
+  if (saved) {
+    renderNotion({ ...saved, live: false });
+    return;
+  }
+  document.body.dataset.notion = "error";
+  const banner = document.querySelector("#banner");
+  banner.hidden = false;
+  banner.textContent = "The dashboard lists could not be loaded. Goals saved on this device still work.";
+  document.querySelector("#link-state").textContent = "Lists unavailable";
+  syncLine.textContent = "Not synced yet";
+  for (const id of ["#ongoing-mount", "#learning-mount"]) {
+    document.querySelector(id).replaceChildren(h("p", { class: "empty", text: "Could not load this section." }));
   }
 }
 

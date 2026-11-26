@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { handle, perthDate } from "./index.js";
+import { clearListsCache, handle, perthDate } from "./index.js";
 
 const env = {
   NOTION_TOKEN: "secret-token",
@@ -192,5 +192,69 @@ test("import creates open goals and wins with their completed dates", async () =
     assert.equal(body.wins[0].text, "From the phone");
   } finally {
     mock.restore();
+  }
+});
+
+function blockList(blocks) {
+  return { body: { results: blocks, has_more: false }, status: 200 };
+}
+
+test("lists need the passcode and reuse the lesson parser", async () => {
+  clearListsCache();
+  const mock = installFetch((call) => {
+    if (call.url.includes("422bc823-fc97-813d-bfb2-cfb693d9102c")) {
+      return blockList([
+        {
+          id: "todo-1",
+          type: "to_do",
+          has_children: false,
+          to_do: { checked: false, rich_text: [{ plain_text: "Rake leaves" }] },
+        },
+      ]);
+    }
+    return blockList([
+      {
+        id: "lesson-heading",
+        type: "heading_1",
+        has_children: false,
+        heading_1: { rich_text: [{ plain_text: "25 Nov 2026" }] },
+      },
+      {
+        id: "lesson-body",
+        type: "paragraph",
+        has_children: false,
+        paragraph: {
+          rich_text: [{
+            plain_text: "What an LLM actually is\nThe Big Idea: It predicts the next word.\nPractical Use Case: A tradie asks for a quote.\nPro Tip: Give it a role.",
+          }],
+        },
+      },
+    ]);
+  });
+  try {
+    const denied = await handle(request("/lists", { passcode: "" }), env);
+    assert.equal(denied.status, 401);
+
+    const response = await handle(request("/lists"), env);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("Cache-Control"), "private, max-age=60");
+    const body = await response.json();
+    assert.deepEqual(body.todos.todo.map((item) => item.text), ["Rake leaves"]);
+    assert.equal(body.learning.lessons[0].topic, "What an LLM actually is");
+    assert.equal(body.learning.lessons[0].bigIdea, "It predicts the next word.");
+    assert.equal(body.learning.lessons[0].useCase, "A tradie asks for a quote.");
+    assert.equal(body.learning.lessons[0].proTip, "Give it a role.");
+    const callsAfterFirst = mock.calls.length;
+
+    const cached = await handle(request("/lists"), env);
+    assert.equal(cached.status, 200);
+    assert.equal(mock.calls.length, callsAfterFirst);
+
+    const fresh = await handle(request("/lists?fresh=1"), env);
+    assert.equal(fresh.status, 200);
+    assert.ok(mock.calls.length > callsAfterFirst);
+  } finally {
+    mock.restore();
+    clearListsCache();
   }
 });

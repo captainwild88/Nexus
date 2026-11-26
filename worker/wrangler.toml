@@ -6,4 +6,6 @@ workers_dev = true
 [vars]
 NOTION_VERSION = "2026-03-11"
 NOTION_DATA_SOURCE_ID = "423bc823-fc97-8151-aff3-000b1b2bcd0a"
+TODOS_PAGE_ID = "422bc823-fc97-813d-bfb2-cfb693d9102c"
+LEARNING_PAGE_ID = "423bc823-fc97-81c8-92b9-d3015213b159"
 ALLOWED_ORIGIN = "https://captainwild88.github.io"
