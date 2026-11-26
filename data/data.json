@@ -2,7 +2,7 @@
   "version": 1,
   "source": "notion",
   "notionConnected": true,
-  "syncedAt": "2026-11-25T04:15:17.890Z",
+  "syncedAt": "2026-11-26T17:28:27.240Z",
   "todos": {
     "title": "To-Dos",
     "todo": [
@@ -48,6 +48,13 @@
   "learning": {
     "found": true,
     "lessons": [
+      {
+        "date": "2026-11-26",
+        "topic": "Prompting basics",
+        "bigIdea": "An LLM is like a new apprentice who's read a lot, but doesn't know what you want until you say it clearly. A vague ask gets a vague result. A good prompt names the job, who it's for, the tone, and what \"done\" looks like, like giving a clear brief instead of \"can you sort this\".",
+        "useCase": "Instead of \"write a post about habits\", try: \"Write a 6-line X post for tired dads who keep starting over. Direct, no fluff, no hashtags. Start with the feeling, then the small action.\" That's the difference between a generic post and one you can actually use.",
+        "proTip": "Use this shape every time: Role + Task + Audience + Constraints. \"You're an IdenGap coach. Write 3 short options for a caption about starting small. Audience is working dads. No jargon, no emoji, under 400 characters.\""
+      },
       {
         "date": "2026-11-25",
         "topic": "What an LLM actually is",
