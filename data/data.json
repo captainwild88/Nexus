@@ -2,7 +2,7 @@
   "version": 1,
   "source": "notion",
   "notionConnected": true,
-  "syncedAt": "2026-11-26T17:28:27.240Z",
+  "syncedAt": "2026-11-27T10:24:55.126Z",
   "todos": {
     "title": "To-Dos",
     "todo": [
@@ -48,6 +48,13 @@
   "learning": {
     "found": true,
     "lessons": [
+      {
+        "date": "2026-11-27",
+        "topic": "Context windows",
+        "bigIdea": "A context window is how much the AI can keep in mind at once, like a whiteboard in a meeting room. Everything you've said in the chat, plus what you've pasted in, goes on the board. When it fills up, the oldest stuff gets wiped to make room, so in a long chat it can quietly forget what you told it at the start.",
+        "useCase": "Someone pastes a 40-page contract and asks for the risky bits. That works because it all fits on the board. But after an hour of back and forth on something else, asking \"what was clause 12 again?\" might get a wrong answer, because the contract has started to drop off.",
+        "proTip": "For anything important, start a fresh chat and put the key info right at the top. If a long chat starts going off track, ask it \"summarise what we've agreed so far in 5 lines\", then paste that summary into a new chat and carry on from there."
+      },
       {
         "date": "2026-11-26",
         "topic": "Prompting basics",
