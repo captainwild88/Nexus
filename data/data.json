@@ -2,7 +2,7 @@
   "version": 1,
   "source": "notion",
   "notionConnected": true,
-  "syncedAt": "2026-11-27T10:24:55.126Z",
+  "syncedAt": "2026-11-28T02:26:21.320Z",
   "todos": {
     "title": "To-Dos",
     "todo": [
@@ -48,6 +48,13 @@
   "learning": {
     "found": true,
     "lessons": [
+      {
+        "date": "2026-11-28",
+        "topic": "Hallucinations",
+        "bigIdea": "A hallucination is when the AI states something false in a confident voice. It's like a mate at the pub who'd rather give you a smooth answer than admit he doesn't know. The AI is predicting words that sound right, not checking facts, so a made-up name, quote or number can look just as polished as a real one.",
+        "useCase": "You ask for stats to back up an IdenGap post and it hands you a neat \"study\" with a percentage. Before you use it, ask for the source, then check the source yourself. If it can't point to a real one, treat the number as made up.",
+        "proTip": "Tell it up front: \"If you're not sure, say so. Don't guess.\" Then for anything that matters (numbers, quotes, names, dates), verify it yourself before it goes out."
+      },
       {
         "date": "2026-11-27",
         "topic": "Context windows",
